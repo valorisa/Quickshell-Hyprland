@@ -14,9 +14,9 @@ err()  { echo -e "\e[31m[ERROR]\e[0m $*" >&2; exit 1; }
 
 run() {
     if $DRY_RUN; then
-        echo "  (dry-run) $*"
+        echo "  (dry-run)" "$@"
     else
-        eval "$@"
+        "$@"
     fi
 }
 
@@ -47,13 +47,13 @@ if [[ "$DISTRO" == "arch" ]]; then
     )
 
     log "Installing packages via pacman…"
-    run "sudo pacman -S --needed --noconfirm ${PKGS[*]}"
+    run sudo pacman -S --needed --noconfirm "${PKGS[@]}"
 
     # AUR fallback for quickshell if not in official repos
     if ! pacman -Qi quickshell &>/dev/null; then
         warn "quickshell not found in official repos — trying AUR (yay required)"
         command -v yay &>/dev/null || err "yay not found. Install it first: https://github.com/Jguer/yay"
-        run "yay -S --needed --noconfirm quickshell"
+        run yay -S --needed --noconfirm quickshell
     fi
 
     ok "Arch packages installed"
@@ -75,15 +75,15 @@ if [[ "$DISTRO" == "debian" ]]; then
         playerctl
         grim slurp
     )
-    run "sudo apt update"
-    run "sudo apt install -y ${BUILD_DEPS[*]}"
+    run sudo apt update
+    run sudo apt install -y "${BUILD_DEPS[@]}"
 
     log "Cloning & building QuickShell…"
     TMP=$(mktemp -d)
-    run "git clone https://github.com/quickshell-mirror/quickshell.git \"$TMP/quickshell\""
-    run "cmake -B \"$TMP/build\" -G Ninja -S \"$TMP/quickshell\""
-    run "cmake --build \"$TMP/build\""
-    run "sudo cmake --install \"$TMP/build\""
+    run git clone https://github.com/quickshell-mirror/quickshell.git "$TMP/quickshell"
+    run cmake -B "$TMP/build" -G Ninja -S "$TMP/quickshell"
+    run cmake --build "$TMP/build"
+    run sudo cmake --install "$TMP/build"
 
     ok "QuickShell built & installed"
 fi
@@ -94,7 +94,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "$SCRIPT_DIR" != "$DEST" ]]; then
     log "Symlinking config → $DEST"
-    run "ln -sfn \"$SCRIPT_DIR\" \"$DEST\""
+    run ln -sfn "$SCRIPT_DIR" "$DEST"
 else
     log "Config already at $DEST — skipping symlink"
 fi
@@ -103,7 +103,7 @@ fi
 WALLPAPER="${HOME}/wallpaper.jpg"
 if [[ -f "$WALLPAPER" ]]; then
     log "Generating color scheme from $WALLPAPER…"
-    run "wal -i \"$WALLPAPER\""
+    run wal -i "$WALLPAPER"
     ok "Color scheme generated"
 else
     warn "No wallpaper found at $WALLPAPER. Run 'wal -i /path/to/wallpaper' manually."
@@ -114,8 +114,8 @@ HYPR_CONF="$HOME/.config/hypr/hyprland.conf"
 if [[ -f "$HYPR_CONF" ]]; then
     if ! grep -q "exec-once = quickshell" "$HYPR_CONF"; then
         log "Adding QuickShell to Hyprland autostart…"
-        run "echo 'exec-once = quickshell' >> \"$HYPR_CONF\""
-        run "echo 'source = ~/.config/quickshell/hyprland-layer-config.conf' >> \"$HYPR_CONF\""
+        run sh -c "echo 'exec-once = quickshell' >> \"$HYPR_CONF\""
+        run sh -c "echo 'source = ~/.config/quickshell/hyprland-layer-config.conf' >> \"$HYPR_CONF\""
         ok "Hyprland config updated"
     else
         log "QuickShell already in hyprland.conf — skipping"
