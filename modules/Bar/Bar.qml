@@ -9,6 +9,9 @@ import "."
 PanelWindow {
     id: root
 
+    // Reference to ControlCenter panel (injected from shell.qml)
+    property var ccPanel: null
+
     // ─── Layer Shell positioning ────────────────────────────
     anchors {
         top:   true
@@ -41,9 +44,41 @@ PanelWindow {
 
         Item { Layout.fillWidth: true }
 
-        // Right — System stats
-        SystemStats {
+        // Right — System stats + CC toggle
+        Row {
             anchors.verticalCenter: parent.verticalCenter
+            spacing: Sizes.barSpacing
+
+            SystemStats {}
+
+            // Control Center toggle button
+            Rectangle {
+                width:  28
+                height: 28
+                radius: Sizes.radius / 2
+                anchors.verticalCenter: parent.verticalCenter
+                color: ccPanel && ccPanel.open
+                    ? Colors.withAlpha(Colors.colAccent, 0.20)
+                    : "transparent"
+
+                Behavior on color { ColorAnimation { duration: Sizes.animDuration } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text:  "󰍜"
+                    color: ccPanel && ccPanel.open
+                        ? Colors.colAccent
+                        : Colors.colFgMuted
+                    font.pixelSize: Sizes.fontLg
+
+                    Behavior on color { ColorAnimation { duration: Sizes.animDuration } }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: if (ccPanel) ccPanel.toggle()
+                }
+            }
         }
     }
 }

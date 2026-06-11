@@ -11,10 +11,29 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ### Planned
 
-- ControlCenter (WiFi, Bluetooth, audio, brightness sliders)
 - MediaControl widget (MPRIS — Spotify / mpv)
 - pywal dynamic color integration
 - Custom shaders for blur/glow effects
+
+---
+
+## [0.2.0] — 2026-06-11
+
+### Added
+
+- `modules/ControlCenter/ControlCenter.qml` — slide-down panel (top-right)
+- `modules/ControlCenter/CCToggle.qml` — pill toggle (WiFi, Bluetooth, DND, Night)
+- `modules/ControlCenter/CCSlider.qml` — draggable slider (audio, brightness)
+- `modules/ControlCenter/CCNetworkInfo.qml` — SSID + local IP display
+- `modules/ControlCenter/CCActionButton.qml` — power/reboot/logout actions
+- `services/AudioService.qml` — PipeWire volume & mute singleton
+- `services/BrightnessService.qml` — backlight control via brightnessctl
+- `services/WifiService.qml` — NetworkManager wifi toggle singleton
+- `services/BluetoothService.qml` — bluetoothctl power toggle singleton
+- `services/NightService.qml` — hyprsunset night mode singleton
+- `services/qmldir` — singleton registration for all services
+- Bar toggle button to open/close ControlCenter
+- `shell.qml` updated to wire ControlCenter ↔ Bar
 
 ---
 
