@@ -18,7 +18,7 @@
 ### ✨ Fonctionnalités
 
 | Fonctionnalité | Description |
-|----------------|-------------|
+| --- | --- |
 | 🎨 **Thème dynamique** | Intégration `pywal` pour palette basée sur le wallpaper |
 | 🧩 **Modulaire** | Composants isolés et réutilisables |
 | 🔔 **Notifications** | Toasts DBus avec auto-dismiss |
@@ -28,7 +28,7 @@
 
 ### 🛠️ Prérequis
 
-**Arch Linux**
+#### Arch Linux
 
 ```bash
 yay -S quickshell qt6-base qt6-declarative qt6-wayland hyprland \
@@ -36,9 +36,11 @@ yay -S quickshell qt6-base qt6-declarative qt6-wayland hyprland \
         bluez bluez-utils upower grim slurp playerctl
 ```
 
-**Ubuntu / Debian** — voir [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+#### Ubuntu / Debian
 
-### 🚀 Installation
+Voir [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+
+### 🚀 Installation FR
 
 ```bash
 # 1. Cloner dans ~/.config/quickshell
@@ -74,7 +76,7 @@ readonly property int barHeight: 40
 
 ### 📂 Structure du projet
 
-```
+```text
 ~/.config/quickshell/
 ├── assets/           # Icons, shaders, ressources
 ├── components/       # Éléments UI réutilisables
@@ -88,7 +90,7 @@ readonly property int barHeight: 40
 ### 🐛 Dépannage
 
 | Problème | Solution |
-|----------|----------|
+| --- | --- |
 | Couleurs manquantes | Lancer `wal -i /chemin/wallpaper` |
 | Animations saccadées | Vérifier `hyprland-layer-config.conf` sourcé |
 | Audio absent | Vérifier `pipewire` + `wireplumber` actifs |
@@ -103,7 +105,7 @@ readonly property int barHeight: 40
 ### ✨ Features
 
 | Feature | Description |
-|---------|-------------|
+| --- | --- |
 | 🎨 **Dynamic theming** | `pywal` integration for wallpaper-based color schemes |
 | 🧩 **Modular** | Isolated, reusable QML components |
 | 🔔 **Notifications** | DBus notification toasts with auto-dismiss |
@@ -113,7 +115,7 @@ readonly property int barHeight: 40
 
 ### 🛠️ Prerequisites
 
-**Arch Linux**
+#### Arch Linux (EN)
 
 ```bash
 yay -S quickshell qt6-base qt6-declarative qt6-wayland hyprland \
@@ -121,9 +123,11 @@ yay -S quickshell qt6-base qt6-declarative qt6-wayland hyprland \
         bluez bluez-utils upower grim slurp playerctl
 ```
 
-**Ubuntu / Debian** — see [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+#### Ubuntu / Debian (EN)
 
-### 🚀 Installation
+See [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
+
+### 🚀 Installation EN
 
 ```bash
 # 1. Clone into ~/.config/quickshell
@@ -159,7 +163,7 @@ readonly property int barHeight: 40
 
 ### 📂 Project structure
 
-```
+```text
 ~/.config/quickshell/
 ├── assets/           # Icons, shaders, resources
 ├── components/       # Reusable UI elements
@@ -173,7 +177,7 @@ readonly property int barHeight: 40
 ### 🐛 Troubleshooting
 
 | Problem | Solution |
-|---------|----------|
+| --- | --- |
 | Missing colors | Run `wal -i /path/to/wallpaper` |
 | Jerky animations | Verify `hyprland-layer-config.conf` is sourced |
 | No audio widget | Check `pipewire` + `wireplumber` running |
