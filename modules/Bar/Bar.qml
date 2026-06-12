@@ -29,9 +29,15 @@ PanelWindow {
         anchors.fill: parent
         anchors.leftMargin:  Sizes.barSpacing
         anchors.rightMargin: Sizes.barSpacing
+        spacing: Sizes.barSpacing
 
         // Left — Workspaces
         Workspaces {
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // Left-center — Media control (hidden + zero-width if no MPRIS player)
+        MediaControl {
             anchors.verticalCenter: parent.verticalCenter
         }
 

@@ -11,9 +11,24 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ### Planned
 
-- MediaControl widget (MPRIS — Spotify / mpv)
 - pywal dynamic color integration
 - Custom shaders for blur/glow effects
+
+---
+
+## [0.3.0] — 2026-06-12
+
+### Added
+
+- `services/MediaService.qml` — MPRIS media control singleton via `playerctl`
+  (status, title, artist, player name; play/pause/next/previous)
+- `services/qmldir` — registered `MediaService` singleton
+- `modules/Bar/MediaControl.qml` — MPRIS widget (track info + transport controls),
+  fully collapses to zero width when no player is active
+- `modules/Bar/MCButton.qml` — reusable circular icon button (prev/play-pause/next)
+- `modules/Bar/Bar.qml` — wired `MediaControl` between Workspaces and Clock
+- README — new "MediaControl" walkthrough sections (FR/EN), updated architecture
+  diagrams, dependency tables, and roadmap
 
 ---
 

@@ -95,6 +95,7 @@ Hyprland (compositeur)
         └── lit shell.qml  ← point d'entrée
               ├── Bar            (barre du haut)
               │     ├── Workspaces   (espaces de travail)
+              │     ├── MediaControl (lecteur MPRIS — Spotify, mpv…)
               │     ├── Clock        (horloge + date)
               │     └── SystemStats  (CPU / RAM / batterie)
               ├── ControlCenter  (panel WiFi, BT, volume…)
@@ -107,6 +108,7 @@ Les services (singletons) sont partagés entre les modules :
   WifiService       → nmcli
   BluetoothService  → bluetoothctl
   NightService      → hyprsunset
+  MediaService      → playerctl (MPRIS)
 ```
 
 Chaque bloc est un fichier `.qml` indépendant dans `modules/` ou `services/`.
@@ -147,7 +149,7 @@ Distributions recommandées pour débuter avec Hyprland :
 | `brightnessctl` | Contrôle de la luminosité de l'écran | ⚡ Si vous êtes sur laptop |
 | `grim` | Capture d'écran (screenshot) | ⚡ Optionnel |
 | `slurp` | Sélection de zone pour screenshot | ⚡ Optionnel |
-| `playerctl` | Contrôle des lecteurs multimédia (Spotify, mpv…) | ⚡ Phase 3 |
+| `playerctl` | Contrôle des lecteurs multimédia (Spotify, mpv…) | ✅ Oui — MediaControl |
 | `hyprsunset` | Mode nuit (filtre lumière bleue) | ⚡ Optionnel |
 
 #### Arch Linux (ou Manjaro / EndeavourOS)
@@ -233,6 +235,68 @@ quickshell
 # Ou recharger Hyprland pour que exec-once prenne effet
 hyprctl reload
 ```
+
+---
+
+### 🎵 Le widget MediaControl — fonctionnement détaillé
+
+Si vous écoutez de la musique avec **Spotify**, **mpv**, **VLC**, ou même un onglet
+audio dans **Firefox/Chromium**, un petit lecteur apparaît automatiquement dans la
+barre, juste après les espaces de travail.
+
+#### Comment ça fonctionne ?
+
+Le widget utilise **MPRIS** (Media Player Remote Interfacing Specification), un
+standard DBus que la plupart des lecteurs Linux implémentent. En coulisses, QuickShell
+appelle l'outil `playerctl` toutes les secondes pour récupérer :
+
+- le titre de la piste en cours ;
+- l'artiste ;
+- l'état (lecture / pause) ;
+- le nom du lecteur actif.
+
+#### Que voit-on dans la barre ?
+
+```text
+ ⏮  ⏯  ⏭   Nom de la piste — Artiste
+```
+
+| Élément | Action |
+| --- | --- |
+| ⏮ (précédent) | `playerctl previous` — piste précédente |
+| ⏯ (lecture/pause) | `playerctl play-pause` — bascule lecture/pause, icône mise en accent |
+| ⏭ (suivant) | `playerctl next` — piste suivante |
+| Texte titre — artiste | Tronqué automatiquement si trop long (max ~220px) |
+
+#### Et si rien ne joue ?
+
+**Le widget disparaît complètement.** Aucune icône grisée, aucun espace réservé :
+si `playerctl` ne détecte aucun lecteur MPRIS actif, le widget a une largeur de `0`
+et n'occupe aucune place dans la barre. Dès qu'un lecteur démarre, il réapparaît
+automatiquement (délai maximum : 1 seconde, le temps du prochain sondage).
+
+#### Lecteurs testés / compatibles
+
+- **Spotify** (client officiel Linux) ✅
+- **mpv** — nécessite l'option `--input-ipc-server` ou le plugin `mpris` activé ✅
+- **VLC** — MPRIS activé par défaut sur la plupart des distributions ✅
+- **Firefox / Chromium** — onglets avec lecture audio/vidéo ✅
+- Tout autre lecteur compatible MPRIS2
+
+#### Dépannage spécifique
+
+Si le widget ne s'affiche jamais alors que de la musique joue :
+
+```bash
+# Vérifier que playerctl détecte le lecteur
+playerctl status
+
+# Lister tous les lecteurs MPRIS actifs
+playerctl -l
+```
+
+Si `playerctl -l` est vide alors que Spotify/mpv joue, le lecteur n'expose pas
+son interface MPRIS — vérifiez sa configuration ou ses plugins.
 
 ---
 
@@ -334,6 +398,8 @@ et bascule sur un redémarrage propre si l'IPC n'est pas disponible.
 │   ├── Bar/
 │   │   ├── Bar.qml               ← Barre principale (layout général)
 │   │   ├── Workspaces.qml        ← Indicateurs d'espaces de travail Hyprland
+│   │   ├── MediaControl.qml      ← Widget MPRIS (titre/artiste + contrôles)
+│   │   ├── MCButton.qml          ← Bouton icône réutilisable (prev/play/next)
 │   │   ├── Clock.qml             ← Horloge + date
 │   │   └── SystemStats.qml       ← CPU / RAM / batterie
 │   │
@@ -357,6 +423,7 @@ et bascule sur un redémarrage propre si l'IPC n'est pas disponible.
 │   ├── WifiService.qml           ← WiFi via nmcli
 │   ├── BluetoothService.qml      ← Bluetooth via bluetoothctl
 │   ├── NightService.qml          ← Mode nuit via hyprsunset
+│   ├── MediaService.qml          ← Lecteur média MPRIS via playerctl
 │   └── qmldir                   ← Déclare tous les services comme singletons
 │
 ├── assets/
@@ -428,7 +495,7 @@ quickshell 2>&1 | tee /tmp/qs.log
 - [x] OSD — Volume & Brightness
 - [x] Notifications — DBus toasts
 - [x] ControlCenter — WiFi, Bluetooth, DND, Night, audio, brightness, power actions
-- [ ] MediaControl — MPRIS (Spotify, mpv)
+- [x] MediaControl — MPRIS (Spotify, mpv, VLC, browsers)
 - [ ] pywal dynamic color reload
 - [ ] Custom shaders
 
@@ -529,6 +596,7 @@ Hyprland (compositor)
         └── reads shell.qml  ← entry point
               ├── Bar            (top bar)
               │     ├── Workspaces   (workspace indicators)
+              │     ├── MediaControl (MPRIS player — Spotify, mpv…)
               │     ├── Clock        (clock + date)
               │     └── SystemStats  (CPU / RAM / battery)
               ├── ControlCenter  (WiFi, BT, volume panel)
@@ -541,6 +609,7 @@ Services (singletons) shared across modules:
   WifiService       → nmcli
   BluetoothService  → bluetoothctl
   NightService      → hyprsunset
+  MediaService      → playerctl (MPRIS)
 ```
 
 ---
@@ -578,7 +647,7 @@ Recommended distributions for Hyprland beginners:
 | `brightnessctl` | Screen brightness control | ⚡ Laptop only |
 | `grim` | Screenshot tool | ⚡ Optional |
 | `slurp` | Region selection for screenshots | ⚡ Optional |
-| `playerctl` | Media player control (Spotify, mpv…) | ⚡ Phase 3 |
+| `playerctl` | Media player control (Spotify, mpv…) | ✅ Yes — MediaControl |
 | `hyprsunset` | Night mode (blue light filter) | ⚡ Optional |
 
 #### Arch Linux (EN)
@@ -649,6 +718,68 @@ quickshell
 # Or reload Hyprland so exec-once takes effect
 hyprctl reload
 ```
+
+---
+
+### 🎵 The MediaControl widget — detailed walkthrough
+
+If you're listening to music with **Spotify**, **mpv**, **VLC**, or even an audio
+tab in **Firefox/Chromium**, a small player widget appears automatically in the bar,
+right after the workspace indicators.
+
+#### How does it work?
+
+The widget relies on **MPRIS** (Media Player Remote Interfacing Specification),
+a DBus standard implemented by most Linux media players. Behind the scenes,
+QuickShell calls `playerctl` once per second to retrieve:
+
+- the current track title;
+- the artist;
+- the playback state (playing / paused);
+- the name of the active player.
+
+#### What shows up in the bar?
+
+```text
+ ⏮  ⏯  ⏭   Track title — Artist
+```
+
+| Element | Action |
+| --- | --- |
+| ⏮ (previous) | `playerctl previous` — go to previous track |
+| ⏯ (play/pause) | `playerctl play-pause` — toggles playback, icon highlighted when playing |
+| ⏭ (next) | `playerctl next` — go to next track |
+| Title — artist text | Auto-truncated if too long (max ~220px) |
+
+#### What if nothing is playing?
+
+**The widget disappears entirely.** No greyed-out icons, no reserved space:
+if `playerctl` finds no active MPRIS player, the widget collapses to zero width
+and takes no room in the bar. As soon as a player starts, it reappears
+automatically (within 1 second, the polling interval).
+
+#### Tested / compatible players
+
+- **Spotify** (official Linux client) ✅
+- **mpv** — requires `--input-ipc-server` or the `mpris` plugin enabled ✅
+- **VLC** — MPRIS enabled by default on most distributions ✅
+- **Firefox / Chromium** — tabs playing audio/video ✅
+- Any other MPRIS2-compatible player
+
+#### Widget-specific troubleshooting
+
+If the widget never appears while music is playing:
+
+```bash
+# Check that playerctl detects the player
+playerctl status
+
+# List all active MPRIS players
+playerctl -l
+```
+
+If `playerctl -l` is empty while Spotify/mpv is playing, the player is not
+exposing its MPRIS interface — check its configuration or plugins.
 
 ---
 
@@ -749,7 +880,7 @@ quickshell 2>&1 | tee /tmp/qs.log
 - [x] OSD — Volume & Brightness
 - [x] Notifications — DBus toasts
 - [x] ControlCenter — WiFi, Bluetooth, DND, Night, audio, brightness, power actions
-- [ ] MediaControl — MPRIS (Spotify, mpv)
+- [x] MediaControl — MPRIS (Spotify, mpv, VLC, browsers)
 - [ ] pywal dynamic color reload
 - [ ] Custom shaders
 
