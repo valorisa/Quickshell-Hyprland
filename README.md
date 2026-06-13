@@ -109,6 +109,9 @@ Les services (singletons) sont partagés entre les modules :
   BluetoothService  → bluetoothctl
   NightService      → hyprsunset
   MediaService      → playerctl (MPRIS)
+
+config/Colors.qml est dynamique : surveille colors.json (pywal) en continu.
+components/ fournit GlowRect, BlurPanel, PulseGlow — effets visuels réutilisables.
 ```
 
 Chaque bloc est un fichier `.qml` indépendant dans `modules/` ou `services/`.
@@ -141,6 +144,7 @@ Distributions recommandées pour débuter avec Hyprland :
 | `qt6-svg` | Support des icônes SVG | ✅ Oui |
 | `hyprland` | Le compositeur de fenêtres | ✅ Oui |
 | `python-pywal` | Génère une palette de couleurs depuis un fond d'écran | ✅ Recommandé |
+| `jq` | Parsing JSON pour `wal-to-qml.sh` (export debug palette) | ✅ Recommandé |
 | `pipewire` | Serveur audio moderne (remplace PulseAudio) | ✅ Oui |
 | `wireplumber` | Gestionnaire de sessions PipeWire | ✅ Oui |
 | `networkmanager` | Gestion WiFi / Ethernet | ✅ Oui |
@@ -156,7 +160,7 @@ Distributions recommandées pour débuter avec Hyprland :
 
 ```bash
 yay -S quickshell qt6-base qt6-declarative qt6-wayland qt6-svg \
-        hyprland python-pywal \
+        hyprland python-pywal jq \
         pipewire wireplumber \
         networkmanager \
         bluez bluez-utils \
@@ -235,6 +239,153 @@ quickshell
 # Ou recharger Hyprland pour que exec-once prenne effet
 hyprctl reload
 ```
+
+---
+
+### 🎨 Thème dynamique pywal — fonctionnement détaillé
+
+Depuis la version 0.4.0, **`config/Colors.qml` est dynamique**. Au lieu d'une palette
+figée, ce fichier surveille en permanence `~/.cache/wal/colors.json` (généré par
+`pywal`) et met à jour les couleurs de toute l'interface **automatiquement, sans
+redémarrer QuickShell**.
+
+#### Comment ça marche concrètement ?
+
+1. Toutes les 2 secondes, QuickShell vérifie la date de modification de
+   `~/.cache/wal/colors.json`.
+2. Si le fichier a changé (ou vient d'apparaître), il est relu et sa palette
+   (16 couleurs ANSI + couleurs spéciales `background`/`foreground`) est appliquée
+   directement aux propriétés de `Colors.qml`.
+3. Tous les widgets qui utilisent `Colors.colBg`, `Colors.colAccent`, etc. se
+   redessinent instantanément avec les nouvelles couleurs.
+4. Si vous supprimez `~/.cache/wal/colors.json`, l'interface revient automatiquement
+   à la palette statique Catppuccin Macchiato après ~2 secondes.
+
+#### Utilisation manuelle (à la demande)
+
+```bash
+wal -i /chemin/vers/wallpaper.jpg
+```
+
+C'est tout — pas besoin de relancer QuickShell. Les couleurs changent dans les 2
+secondes qui suivent.
+
+#### Utilisation via le script du projet (recommandé)
+
+```bash
+~/.config/quickshell/scripts/wal-gen.sh /chemin/vers/wallpaper.jpg
+```
+
+Ce script fait trois choses :
+
+1. Lance `wal -i` avec un réglage de saturation adapté (`--saturate 0.7`)
+2. Exporte un instantané lisible de la palette dans `config/ColorsWal.qml`
+   (fichier de référence/debug, **non utilisé par le moteur** — `Colors.qml` lit
+   directement `colors.json`)
+3. Recharge QuickShell par sécurité (pour les widgets non couverts par le live-reload)
+
+#### Mapping des couleurs pywal → propriétés Colors.qml
+
+| Propriété `Colors.qml` | Source pywal | Rôle |
+| --- | --- | --- |
+| `colBg` | `special.background` | Fond principal |
+| `colFg` | `special.foreground` | Texte principal |
+| `colBgAlt` | `color0` | Fond plus sombre (barres, champs) |
+| `colSurface` | `color8` | Surfaces de cartes/widgets |
+| `colBorder` | `color7` | Bordures |
+| `colFgMuted` | `color7` | Texte secondaire |
+| `colAccent` | `color12` | Accent principal (boutons actifs, curseurs) |
+| `colBlue` | `color4` | Bleu |
+| `colGreen` | `color2` | Vert |
+| `colYellow` | `color3` | Jaune |
+| `colRed` / `colError` | `color1` | Rouge / fond d'erreur |
+
+#### Vérifier que le thème dynamique fonctionne
+
+```bash
+# Vérifier que pywal a bien généré le fichier
+cat ~/.cache/wal/colors.json | jq .
+
+# Inspecter la palette actuellement appliquée (snapshot debug)
+cat ~/.config/quickshell/config/ColorsWal.qml
+```
+
+> **Note :** `jq` est requis pour `wal-to-qml.sh`. S'il est absent, le thème
+> dynamique fonctionne quand même (lecture native en QML) — seul l'export
+> `ColorsWal.qml` sera ignoré.
+
+---
+
+### ✨ Effets visuels (Glow & Blur) — fonctionnement détaillé
+
+La version 0.4.0 introduit trois composants réutilisables dans `components/`
+pour des effets visuels modernes — halos lumineux et flou "verre dépoli" — sans
+dépendance externe lourde (basés sur `QtQuick.Effects.MultiEffect`, inclus avec
+`qt6-declarative`).
+
+#### `GlowRect` — halo statique
+
+Un halo coloré et flouté autour d'un élément, qui s'active/désactive avec un fondu.
+Utilisé partout où un état "actif" doit être mis en valeur.
+
+```qml
+GlowRect {
+    anchors.fill: someToggle
+    active:    someToggle.active
+    glowColor: Colors.colAccent
+    intensity: 0.45
+}
+```
+
+#### `BlurPanel` — fond "verre dépoli"
+
+Un fond semi-transparent et flouté, teinté avec `Colors.colSurface` (donc
+**compatible avec le thème pywal dynamique**). Utilisé pour le fond du
+**ControlCenter**.
+
+```qml
+BlurPanel {
+    anchors.fill: parent
+    radius: Sizes.radius
+    tintAlpha: 0.92
+
+    ColumnLayout {
+        // votre contenu ici
+    }
+}
+```
+
+#### `PulseGlow` — halo animé (shader custom)
+
+Le composant le plus avancé : un anneau lumineux **pulsant** via un shader GLSL
+personnalisé (`assets/shaders/pulseglow.frag`).
+
+**Comportement à deux niveaux :**
+
+- **Avec shader compilé** (`pulseglow.frag.qsb` présent) : animation pulsée fluide,
+  pilotée par le GPU.
+- **Sans shader compilé** (cas par défaut) : `PulseGlow` bascule automatiquement
+  sur `GlowRect` — halo statique, sans erreur ni écran noir.
+
+**Compiler le shader (optionnel) :**
+
+```bash
+# Nécessite qt6-shadertools (qsb)
+qsb --glsl "100 es,120,150" \
+    -o ~/.config/quickshell/assets/shaders/pulseglow.frag.qsb \
+    ~/.config/quickshell/assets/shaders/pulseglow.frag
+```
+
+Une fois compilé, **aucun redémarrage requis** — `PulseGlow` détecte le fichier
+au prochain affichage du composant.
+
+**Où ces effets sont-ils utilisés actuellement ?**
+
+| Composant | Emplacement | Effet |
+| --- | --- | --- |
+| `PulseGlow` | `CCToggle` (WiFi/BT/DND/Night actifs) | Halo coloré pulsé derrière le toggle actif |
+| `BlurPanel` | `ControlCenter` | Fond flouté teinté, remplace le fond uni |
+| `PulseGlow` | `NotificationItem` (urgence critique) | Halo rouge pulsé autour du toast |
 
 ---
 
@@ -390,7 +541,8 @@ et bascule sur un redémarrage propre si l'IPC n'est pas disponible.
 ├── shell.qml                      ← Point d'entrée : charge tous les modules
 │
 ├── config/
-│   ├── Colors.qml                 ← Palette de couleurs (modifiez ici)
+│   ├── Colors.qml                 ← Palette dynamique (pywal auto-reload, modifiez les fallbacks ici)
+│   ├── ColorsWal.qml              ← Snapshot debug généré par wal-to-qml.sh (gitignored)
 │   ├── Sizes.qml                  ← Dimensions et durées d'animation
 │   └── qmldir                    ← Déclare Colors et Sizes comme singletons
 │
@@ -404,15 +556,15 @@ et bascule sur un redémarrage propre si l'IPC n'est pas disponible.
 │   │   └── SystemStats.qml       ← CPU / RAM / batterie
 │   │
 │   ├── ControlCenter/
-│   │   ├── ControlCenter.qml     ← Panel principal (slide-down)
-│   │   ├── CCToggle.qml          ← Bouton toggle réutilisable
+│   │   ├── ControlCenter.qml     ← Panel principal (slide-down, fond BlurPanel)
+│   │   ├── CCToggle.qml          ← Bouton toggle réutilisable (PulseGlow si actif)
 │   │   ├── CCSlider.qml          ← Slider réutilisable
 │   │   ├── CCNetworkInfo.qml     ← SSID + IP
 │   │   └── CCActionButton.qml    ← Boutons power/reboot/logout
 │   │
 │   ├── Notifications/
 │   │   ├── NotificationCenter.qml ← Serveur DBus + colonne de toasts
-│   │   └── NotificationItem.qml  ← Un toast individuel
+│   │   └── NotificationItem.qml  ← Un toast individuel (PulseGlow si urgence critique)
 │   │
 │   └── OSD/
 │       └── OSD.qml               ← Popup volume / luminosité
@@ -428,11 +580,16 @@ et bascule sur un redémarrage propre si l'IPC n'est pas disponible.
 │
 ├── assets/
 │   ├── icons/                    ← Icônes personnalisées (SVG)
-│   ├── shaders/                  ← Shaders QtQuick (effets visuels)
+│   ├── shaders/
+│   │   └── pulseglow.frag        ← Shader GLSL custom (halo pulsé animé)
 │   ├── wallpapers/               ← Fonds d'écran (non versionnés)
 │   └── fonts/                   ← Polices recommandées
 │
-├── components/                   ← Composants UI génériques réutilisables
+├── components/
+│   ├── GlowRect.qml              ← Halo statique (MultiEffect)
+│   ├── BlurPanel.qml             ← Fond "verre dépoli" (MultiEffect)
+│   ├── PulseGlow.qml             ← Halo animé (shader + fallback GlowRect)
+│   └── qmldir                   ← Déclare les composants réutilisables
 │
 ├── scripts/
 │   ├── setup.sh                  ← Installation automatique des dépendances
@@ -496,8 +653,8 @@ quickshell 2>&1 | tee /tmp/qs.log
 - [x] Notifications — DBus toasts
 - [x] ControlCenter — WiFi, Bluetooth, DND, Night, audio, brightness, power actions
 - [x] MediaControl — MPRIS (Spotify, mpv, VLC, browsers)
-- [ ] pywal dynamic color reload
-- [ ] Custom shaders
+- [x] pywal dynamic color reload
+- [x] Custom shaders (glow & blur)
 
 ---
 
@@ -610,6 +767,9 @@ Services (singletons) shared across modules:
   BluetoothService  → bluetoothctl
   NightService      → hyprsunset
   MediaService      → playerctl (MPRIS)
+
+config/Colors.qml is dynamic: continuously watches colors.json (pywal).
+components/ provides GlowRect, BlurPanel, PulseGlow — reusable visual effects.
 ```
 
 ---
@@ -639,6 +799,7 @@ Recommended distributions for Hyprland beginners:
 | `qt6-svg` | SVG icon support | ✅ Yes |
 | `hyprland` | The window compositor | ✅ Yes |
 | `python-pywal` | Generates a color palette from your wallpaper | ✅ Recommended |
+| `jq` | JSON parsing for `wal-to-qml.sh` (debug palette export) | ✅ Recommended |
 | `pipewire` | Modern audio server | ✅ Yes |
 | `wireplumber` | PipeWire session manager | ✅ Yes |
 | `networkmanager` | WiFi / Ethernet management | ✅ Yes |
@@ -654,7 +815,7 @@ Recommended distributions for Hyprland beginners:
 
 ```bash
 yay -S quickshell qt6-base qt6-declarative qt6-wayland qt6-svg \
-        hyprland python-pywal \
+        hyprland python-pywal jq \
         pipewire wireplumber \
         networkmanager \
         bluez bluez-utils \
@@ -718,6 +879,149 @@ quickshell
 # Or reload Hyprland so exec-once takes effect
 hyprctl reload
 ```
+
+---
+
+### 🎨 Dynamic pywal theming — detailed walkthrough
+
+Since version 0.4.0, **`config/Colors.qml` is dynamic**. Instead of a fixed palette,
+this file continuously watches `~/.cache/wal/colors.json` (generated by `pywal`)
+and updates the entire UI's colors **automatically, with no QuickShell restart**.
+
+#### How does it actually work?
+
+1. Every 2 seconds, QuickShell checks the modification time of
+   `~/.cache/wal/colors.json`.
+2. If the file changed (or just appeared), it is re-read and its palette
+   (16 ANSI colors + `background`/`foreground` specials) is applied directly
+   to `Colors.qml`'s properties.
+3. Every widget using `Colors.colBg`, `Colors.colAccent`, etc. redraws instantly
+   with the new colors.
+4. If you delete `~/.cache/wal/colors.json`, the UI automatically reverts to the
+   static Catppuccin Macchiato fallback palette after ~2 seconds.
+
+#### Manual usage (on demand)
+
+```bash
+wal -i /path/to/wallpaper.jpg
+```
+
+That's it — no need to restart QuickShell. Colors update within 2 seconds.
+
+#### Using the project script (recommended)
+
+```bash
+~/.config/quickshell/scripts/wal-gen.sh /path/to/wallpaper.jpg
+```
+
+This script does three things:
+
+1. Runs `wal -i` with a tuned saturation setting (`--saturate 0.7`)
+2. Exports a human-readable palette snapshot to `config/ColorsWal.qml`
+   (a debug/reference file, **not used by the engine** — `Colors.qml` reads
+   `colors.json` directly)
+3. Reloads QuickShell as a safety net (for any widgets outside the live-reload path)
+
+#### pywal color → Colors.qml property mapping
+
+| `Colors.qml` property | pywal source | Role |
+| --- | --- | --- |
+| `colBg` | `special.background` | Main background |
+| `colFg` | `special.foreground` | Main text |
+| `colBgAlt` | `color0` | Darker background (bars, inputs) |
+| `colSurface` | `color8` | Card/widget surfaces |
+| `colBorder` | `color7` | Borders |
+| `colFgMuted` | `color7` | Secondary text |
+| `colAccent` | `color12` | Primary accent (active buttons, cursors) |
+| `colBlue` | `color4` | Blue |
+| `colGreen` | `color2` | Green |
+| `colYellow` | `color3` | Yellow |
+| `colRed` / `colError` | `color1` | Red / error background |
+
+#### Verify dynamic theming is working
+
+```bash
+# Check pywal generated the file
+cat ~/.cache/wal/colors.json | jq .
+
+# Inspect the currently-applied palette (debug snapshot)
+cat ~/.config/quickshell/config/ColorsWal.qml
+```
+
+> **Note:** `jq` is required for `wal-to-qml.sh`. If missing, dynamic theming
+> still works (native QML parsing) — only the `ColorsWal.qml` export is skipped.
+
+---
+
+### ✨ Visual effects (Glow & Blur) — detailed walkthrough
+
+Version 0.4.0 introduces three reusable components in `components/` for modern
+visual effects — glowing halos and "frosted glass" blur — without heavy external
+dependencies (built on `QtQuick.Effects.MultiEffect`, included with `qt6-declarative`).
+
+#### `GlowRect` — static glow
+
+A colored, blurred halo around an element, fading in/out smoothly. Used wherever
+an "active" state needs visual emphasis.
+
+```qml
+GlowRect {
+    anchors.fill: someToggle
+    active:    someToggle.active
+    glowColor: Colors.colAccent
+    intensity: 0.45
+}
+```
+
+#### `BlurPanel` — frosted glass background
+
+A semi-transparent, blurred background tinted with `Colors.colSurface`
+(so it's **compatible with dynamic pywal theming**). Used as the
+**ControlCenter** background.
+
+```qml
+BlurPanel {
+    anchors.fill: parent
+    radius: Sizes.radius
+    tintAlpha: 0.92
+
+    ColumnLayout {
+        // your content here
+    }
+}
+```
+
+#### `PulseGlow` — animated halo (custom shader)
+
+The most advanced component: a **pulsing** glowing ring driven by a custom
+GLSL shader (`assets/shaders/pulseglow.frag`).
+
+**Two-tier behavior:**
+
+- **With compiled shader** (`pulseglow.frag.qsb` present): smooth, GPU-driven
+  pulsing animation.
+- **Without compiled shader** (default): `PulseGlow` automatically falls back
+  to `GlowRect` — static halo, no errors, no black screen.
+
+**Compiling the shader (optional):**
+
+```bash
+# Requires qt6-shadertools (qsb)
+qsb --glsl "100 es,120,150" \
+    -o ~/.config/quickshell/assets/shaders/pulseglow.frag.qsb \
+    ~/.config/quickshell/assets/shaders/pulseglow.frag
+```
+
+Once compiled, **no restart needed** — `PulseGlow` detects the file the next
+time the component is shown.
+
+**Where are these effects currently used?**
+
+| Component | Location | Effect |
+| --- | --- | --- |
+| `PulseGlow` | `CCToggle` (active WiFi/BT/DND/Night) | Pulsing colored halo behind the active toggle |
+| `BlurPanel` | `ControlCenter` | Blurred tinted background, replaces flat color |
+| `PulseGlow` | `NotificationItem` (critical urgency) | Pulsing red halo around the toast |
 
 ---
 
@@ -881,8 +1185,8 @@ quickshell 2>&1 | tee /tmp/qs.log
 - [x] Notifications — DBus toasts
 - [x] ControlCenter — WiFi, Bluetooth, DND, Night, audio, brightness, power actions
 - [x] MediaControl — MPRIS (Spotify, mpv, VLC, browsers)
-- [ ] pywal dynamic color reload
-- [ ] Custom shaders
+- [x] pywal dynamic color reload
+- [x] Custom shaders (glow & blur)
 
 ---
 

@@ -2,6 +2,7 @@
 
 import QtQuick
 import "../../config"
+import "../../components"
 
 Rectangle {
     id: root
@@ -18,6 +19,17 @@ Rectangle {
     radius: Sizes.radius
 
     color: urgency === 2 ? Colors.colError : Colors.colSurface
+
+    // ─── Glow for critical notifications ────────────────────
+    PulseGlow {
+        anchors.fill: parent
+        anchors.margins: -6
+        active:    urgency === 2
+        glowColor: Colors.colRed
+        intensity: 0.5
+        pulseSpeed: 1.0
+        z: -1
+    }
 
     // ─── Slide-in animation ─────────────────────────────────
     transform: Translate { id: slideIn; x: 320 }

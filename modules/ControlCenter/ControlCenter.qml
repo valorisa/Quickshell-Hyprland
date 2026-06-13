@@ -6,6 +6,7 @@ import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import "../../config"
+import "../../components"
 import "."
 
 PanelWindow {
@@ -45,13 +46,11 @@ PanelWindow {
         running: true
     }
 
-    // ─── Panel background ────────────────────────────────────
-    Rectangle {
+    // ─── Panel background (frosted glass via BlurPanel) ──────
+    BlurPanel {
         anchors.fill: parent
         radius: Sizes.radius
-        color:  Colors.colBg
-        border.color: Colors.colBorder
-        border.width: 1
+        tintAlpha: 0.92
 
         // ─── Content layout ──────────────────────────────────
         ColumnLayout {

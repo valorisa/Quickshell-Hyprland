@@ -8,31 +8,26 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
-
 # Pywal generated colors (user-specific, not committed)
 config/colors-wal.qml
-
 # Wallpapers (too large for repo)
 assets/wallpapers/*.jpg
 assets/wallpapers/*.png
 assets/wallpapers/*.jpeg
 assets/wallpapers/*.webp
-
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
-
 # Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
 # Backup archives
 *.tar.gz
 *.zip
-
 # Node (if any tooling)
 node_modules/
+config/ColorsWal.qml

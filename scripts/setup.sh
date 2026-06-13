@@ -38,12 +38,14 @@ if [[ "$DISTRO" == "arch" ]]; then
         qt6-base qt6-declarative qt6-wayland qt6-svg
         hyprland
         python-pywal
+        jq
         pipewire wireplumber
         networkmanager
         bluez bluez-utils
-        upower
+        upower brightnessctl
         grim slurp
         playerctl
+        hyprsunset
     )
 
     log "Installing packages via pacman…"
@@ -71,8 +73,8 @@ if [[ "$DISTRO" == "debian" ]]; then
         libwayland-dev wayland-protocols
         libpipewire-0.3-dev
         libdbus-1-dev libxkbcommon-dev
-        python3-pywal
-        playerctl
+        python3-pywal jq
+        playerctl brightnessctl
         grim slurp
     )
     run sudo apt update

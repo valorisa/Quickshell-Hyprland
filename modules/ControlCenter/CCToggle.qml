@@ -4,6 +4,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../config"
+import "../../components"
 
 Rectangle {
     id: root
@@ -31,6 +32,17 @@ Rectangle {
 
     Behavior on color       { ColorAnimation { duration: Sizes.animDuration } }
     Behavior on border.color { ColorAnimation { duration: Sizes.animDuration } }
+
+    // ─── Glow halo behind active toggles ───────────────────────
+    PulseGlow {
+        anchors.fill: parent
+        anchors.margins: -6
+        active:    root.active
+        glowColor: root.activeColor
+        intensity: 0.45
+        z: -1
+    }
+
 
     // ─── Content ────────────────────────────────────────────
     Column {
