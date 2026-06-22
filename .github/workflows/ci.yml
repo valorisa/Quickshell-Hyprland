@@ -15,7 +15,7 @@ jobs:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install ShellCheck
         run: sudo apt-get install -y shellcheck
       - name: Run ShellCheck
@@ -26,10 +26,10 @@ jobs:
     name: Markdownlint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
       - run: npm install -g markdownlint-cli
       - run: markdownlint "**/*.md" --ignore node_modules
 
@@ -38,7 +38,7 @@ jobs:
     name: QML Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Qt6 tools
         run: |
           sudo apt-get update
